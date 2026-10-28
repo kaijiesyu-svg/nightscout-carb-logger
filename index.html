@@ -1,5 +1,7 @@
 <!doctype html>
-<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NS Logger</title><meta name="theme-color" content="#0863dc"><meta name="application-name" content="NS Logger"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="NS Logger"><link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png"><link rel="apple-touch-icon" href="./icon-192.png"><link rel="manifest" href="./manifest.json"><style>body{font-family:system-ui,-apple-system,sans-serif;background:#f3f5f8;color:#182335;margin:0;padding:24px}.wrap{max-width:480px;margin:35px auto;background:white;padding:26px;border-radius:18px;box-shadow:0 8px 30px #18233512}h1{font-size:24px;margin:0 0 8px}p{color:#526071;line-height:1.6}label{display:block;font-weight:650;margin:18px 0 7px}input,select{box-sizing:border-box;width:100%;font-size:17px;padding:12px;border:1px solid #c9d1dc;border-radius:9px}button{margin-top:24px;background:#1765c1;color:white;border:0;border-radius:10px;width:100%;padding:14px;font-size:17px;font-weight:700;cursor:pointer}button:disabled{opacity:.5;cursor:wait}#status{white-space:pre-wrap;margin-top:16px;font-size:14px}.hint{font-size:13px}.preview{background:#f2f4f7;border-radius:10px;padding:12px;overflow-wrap:anywhere;font-size:13px}code{font-family:ui-monospace,monospace} .food-panel{margin-top:24px;padding:16px;border:1px solid #d8e2f0;border-radius:12px;background:#f8fbff}.food-panel h2{font-size:19px;margin:0 0 8px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid2 label{margin-top:12px}.subbutton{margin-top:10px;background:#667085;font-size:14px;padding:10px}.danger{background:#a93838}.food-actions{display:flex;gap:8px}.food-actions button{flex:1}.muted{font-size:13px;color:#526071}.food-panel input:disabled{background:#edf0f4} </style></head><body><main class="wrap"><h1>NS Logger｜碳水與胰島素紀錄</h1><p>固定使用 Access Token；胰島素為選填，留空時不會上傳胰島素紀錄。網址可記住，Token 可選擇是否儲存在本機。</p><form id="form"><label for="url">Nightscout 網址</label><input id="url" type="url" placeholder="https://你的網站.onrender.com" required autocomplete="off"><label for="token" id="tokenLabel">Access Token</label><input id="token" type="password" placeholder="具有 Treatment 寫入權限的 Token" required autocomplete="off"><p class="hint" id="authHint">Access Token 會透過 Nightscout 支援的 token 查詢參數傳送。請勿分享含 Token 的完整請求網址。</p><label style="font-weight:500"><input id="rememberToken" type="checkbox" style="width:auto;margin-right:8px">在這台裝置記住 Access Token（未加密）</label><button type="button" id="clearSaved" style="margin-top:8px;background:#667085;font-size:14px;padding:10px">清除已儲存設定</button><p class="hint" id="saveStatus"></p><section class="food-panel" aria-label="Google Sheets 食物資料庫"><h2>Google Sheets 食物換算</h2><p class="muted">兩人於 Google Sheets 共同編輯，NS Logger 僅讀取。係數＝每 1g 食物所含的碳水 g 數。</p><label for="sheetUrl">Google Sheets 發布 CSV 網址</label><input id="sheetUrl" type="url" inputmode="url" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv" autocomplete="off"><div class="food-actions"><button type="button" id="saveSheetUrl" class="subbutton">儲存網址</button><button type="button" id="syncFoods" class="subbutton">同步食物資料</button></div><p class="muted" id="syncStatus" role="status" aria-live="polite">尚未同步。可使用上次成功同步的資料。</p><label for="foodSelect">選擇食物</label><select id="foodSelect"><option value="">不使用食物換算（直接輸入碳水）</option></select><div id="conversion" hidden><p id="factorInfo" class="muted"></p><div class="grid2"><div><label for="foodWeight">食物重量（g）</label><input id="foodWeight" type="number" min="0" max="10000" step="any" inputmode="decimal" placeholder="例如 80"></div><div><label for="foodCarbs">碳水（g）</label><input id="foodCarbs" type="number" min="0" max="500" step="any" inputmode="decimal" placeholder="例如 30"></div></div><p class="muted">任一欄輸入，另一欄自動換算，並將碳水帶入下方 NS 上傳欄位。</p></div><p class="muted">Google Sheets 請使用「檔案 → 共用 → 發布到網路」，選擇 Foods 工作表及 CSV。資料須僅含可公開的食物資訊。</p></section><label for="carbs">碳水化合物（g）</label><input id="carbs" type="number" min="0.1" max="500" step="0.1" placeholder="例如 24" required><label for="insulin">實際施打胰島素（U，選填）</label><input id="insulin" type="number" min="0" max="100" step="0.1" placeholder="未施打請留空"><p class="hint">只有確實已施打且知道劑量時才填寫；留空不會送出 insulin 欄位。</p><label for="recordTime">紀錄日期與時間</label><input id="recordTime" type="datetime-local" required><button type="button" id="nowTime" style="margin-top:8px;background:#667085;font-size:14px;padding:10px">設為現在</button><p class="hint">預設為目前時間；可調整為過去時間補登。上傳後自動重設為目前時間。</p><label for="notes">備註（選填）</label><input id="notes" type="text" maxlength="120" placeholder="例如：午餐"><p class="hint">送出資料預覽：</p><div id="preview" class="preview"></div><button id="submit" type="submit">確認並上傳 NS</button><div id="status" role="status" aria-live="polite"></div></form><p class="hint">請使用私人裝置，勿將 Token 提供給其他人。正式使用前先確認 Nightscout 的記錄時間與資料是否正確。</p></main><script>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NS Logger</title><meta name="theme-color" content="#0863dc"><meta name="application-name" content="NS Logger"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="NS Logger"><link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png"><link rel="apple-touch-icon" href="./icon-192.png"><link rel="manifest" href="./manifest.json"><style>body{font-family:system-ui,-apple-system,sans-serif;background:#f3f5f8;color:#182335;margin:0;padding:24px}.wrap{max-width:480px;margin:35px auto;background:white;padding:26px;border-radius:18px;box-shadow:0 8px 30px #18233512}h1{font-size:24px;margin:0 0 8px}p{color:#526071;line-height:1.6}label{display:block;font-weight:650;margin:18px 0 7px}input,select{box-sizing:border-box;width:100%;font-size:17px;padding:12px;border:1px solid #c9d1dc;border-radius:9px}button{margin-top:24px;background:#1765c1;color:white;border:0;border-radius:10px;width:100%;padding:14px;font-size:17px;font-weight:700;cursor:pointer}button:disabled{opacity:.5;cursor:wait}#status{white-space:pre-wrap;margin-top:16px;font-size:14px}.hint{font-size:13px}.preview{background:#f2f4f7;border-radius:10px;padding:12px;overflow-wrap:anywhere;font-size:13px}code{font-family:ui-monospace,monospace} .food-panel{margin-top:24px;padding:16px;border:1px solid #d8e2f0;border-radius:12px;background:#f8fbff}.food-panel h2{font-size:19px;margin:0 0 8px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid2 label{margin-top:12px}.subbutton{margin-top:10px;background:#667085;font-size:14px;padding:10px}.danger{background:#a93838}.food-actions{display:flex;gap:8px}.food-actions button{flex:1}.muted{font-size:13px;color:#526071}.food-panel input:disabled{background:#edf0f4} 
+.settings{border:1px solid #d8e2f0;border-radius:12px;padding:13px 15px;margin:16px 0;background:#f8fafc}.settings summary{cursor:pointer;font-weight:700}.settings .hint{margin-bottom:0}.food-search-results{max-height:210px;overflow-y:auto;border:1px solid #c9d1dc;border-radius:9px;margin-top:5px;background:white}.food-search-results button{display:block;width:100%;margin:0;padding:11px 12px;border-radius:0;background:white;color:#182335;border-bottom:1px solid #edf0f4;text-align:left;font-size:15px;font-weight:500}.food-search-results button:hover,.food-search-results button:focus{background:#f0f5ff}.food-search-results button small{display:block;color:#526071}.meal-list{padding-left:22px;margin:12px 0}.meal-list li{margin-bottom:10px;padding:9px 8px;background:#fff;border:1px solid #dce3ed;border-radius:8px}.meal-item-row{display:flex;align-items:center;gap:8px;justify-content:space-between}.meal-item-row button{width:auto;margin:0;padding:7px 10px;font-size:13px;background:#a93838}.meal-total{font-size:19px;font-weight:750;padding:12px;background:#eaf3ff;border-radius:9px}.tiny-button{width:auto;margin:8px 0 0;padding:9px 12px;font-size:14px}.food-panel{margin-top:12px}input[type=checkbox]{width:auto}.selected-food{font-weight:650;color:#1d4c83}.settings input{margin-bottom:6px}
+</style></head><body><main class="wrap"><h1>NS Logger｜碳水與胰島素紀錄</h1><p>固定使用 Access Token；胰島素為選填，留空時不會上傳胰島素紀錄。網址可記住，Token 可選擇是否儲存在本機。</p><form id="form"><details class="settings" id="settings"><summary>連線設定｜Nightscout 與 Google Sheets</summary><label for="url">Nightscout 網址</label><input id="url" type="url" placeholder="https://你的網站.onrender.com" required autocomplete="off"><label for="token" id="tokenLabel">Access Token</label><input id="token" type="password" placeholder="具有 Treatment 寫入權限的 Token" required autocomplete="off"><p class="hint" id="authHint">Access Token 會透過 Nightscout 支援的 token 查詢參數傳送。請勿分享含 Token 的完整請求網址。</p><label style="font-weight:500"><input id="rememberToken" type="checkbox" style="width:auto;margin-right:8px">在這台裝置記住 Access Token（未加密）</label><button type="button" id="clearSaved" style="margin-top:8px;background:#667085;font-size:14px;padding:10px">清除已儲存設定</button><p class="hint" id="saveStatus"></p><label for="sheetUrl">Google Sheets 發布 CSV 網址</label><input id="sheetUrl" type="url" inputmode="url" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv" autocomplete="off"><button type="button" id="saveSheetUrl" class="subbutton">儲存 Google Sheets 網址</button><p class="hint">設定會保存在此裝置。食物清單同步不會傳送 Nightscout Token。</p></details><section class="food-panel" aria-label="Google Sheets 食物資料庫"><h2>Google Sheets 食物換算</h2><p class="muted">兩人於 Google Sheets 共同編輯，NS Logger 僅讀取。係數＝每 1g 食物所含的碳水 g 數。</p><button type="button" id="syncFoods" class="subbutton">同步食物資料</button><p class="muted" id="syncStatus" role="status" aria-live="polite">尚未同步。可使用上次成功同步的資料。</p><label for="foodSearch">搜尋食物（支援名稱部分比對）</label><input id="foodSearch" type="search" placeholder="輸入食物名稱，例如：飯、蘋果" autocomplete="off" aria-controls="foodResults"><div id="foodResults" class="food-search-results" role="group" aria-label="食物搜尋結果" hidden></div><p id="selectedFood" class="selected-food" aria-live="polite">尚未選擇食物</p><div id="conversion" hidden><p id="factorInfo" class="muted"></p><div class="grid2"><div><label for="foodWeight">食物重量（g）</label><input id="foodWeight" type="number" min="0" max="10000" step="any" inputmode="decimal" placeholder="例如 80"></div><div><label for="foodCarbs">碳水（g）</label><input id="foodCarbs" type="number" min="0" max="500" step="any" inputmode="decimal" placeholder="例如 30"></div></div><button type="button" id="addFood" class="subbutton">＋ 加入本餐</button></div><div class="meal-section"><h2>本餐食物項目</h2><ol id="mealList" class="meal-list"></ol><p id="mealEmpty" class="muted">尚未加入食物，可先搜尋食物並輸入重量。</p><div class="meal-total">本餐總碳水：<span id="mealTotal">0</span> g</div><button type="button" id="clearMeal" class="tiny-button danger">清空本餐</button><p class="muted">加入的食物會累加碳水；送出 Nightscout 時使用本餐總碳水。也可不加入食物，直接在下方輸入碳水。</p></div><p class="muted">Google Sheets 請使用「檔案 → 共用 → 發布到網路」，選擇 Foods 工作表及 CSV。資料須僅含可公開的食物資訊。</p></section><label for="carbs">本次上傳碳水總量（g）</label><input id="carbs" type="number" min="0.1" max="500" step="0.1" placeholder="例如 24" required><label for="insulin">實際施打胰島素（U，選填）</label><input id="insulin" type="number" min="0" max="100" step="0.1" placeholder="未施打請留空"><p class="hint">只有確實已施打且知道劑量時才填寫；留空不會送出 insulin 欄位。</p><label for="recordTime">紀錄日期與時間</label><input id="recordTime" type="datetime-local" required><button type="button" id="nowTime" style="margin-top:8px;background:#667085;font-size:14px;padding:10px">設為現在</button><p class="hint">預設為目前時間；可調整為過去時間補登。上傳後自動重設為目前時間。</p><label for="notes">備註（選填）</label><input id="notes" type="text" maxlength="120" placeholder="例如：午餐"><p class="hint">送出資料預覽：</p><div id="preview" class="preview"></div><button id="submit" type="submit">確認並上傳 NS</button><div id="status" role="status" aria-live="polite"></div></form><p class="hint">請使用私人裝置，勿將 Token 提供給其他人。正式使用前先確認 Nightscout 的記錄時間與資料是否正確。</p></main><script>
 const $=id=>document.getElementById(id);let busy=false;
 const storageKey='nightscout-carbs-settings-v1';
 
@@ -7,12 +9,12 @@ function localNow(){const d=new Date();return new Date(d.getTime()-d.getTimezone
 function resetTime(){$('recordTime').value=localNow();preview()}
 function saveSettings(){try{const x={url:$('url').value,rememberToken:$('rememberToken').checked};if(x.rememberToken)x.token=$('token').value;localStorage.setItem(storageKey,JSON.stringify(x));$('saveStatus').textContent=x.rememberToken?'網址與 Token 已儲存在此瀏覽器（未加密）。':'已記住網址；不保存 Token。'}catch(e){$('saveStatus').textContent='此瀏覽器無法保存設定，仍可正常使用上傳。'}}
 function restoreSettings(){try{const x=JSON.parse(localStorage.getItem(storageKey)||'{}');if(x.url)$('url').value=x.url;$('rememberToken').checked=!!x.rememberToken;if(x.rememberToken&&x.token)$('token').value=x.token}catch(e){}}
-function payload(){const n=Number($('carbs').value);const p={eventType:'Carb Correction',carbs:n};const time=$('recordTime').value;if(time){const d=new Date(time);if(!Number.isNaN(d.getTime()))p.created_at=d.toISOString()}const raw=$('insulin').value.trim();if(raw!=='')p.insulin=Number(raw);const note=$('notes').value.trim();if(note)p.notes=note;return p}
+function payload(){const n=Number($('carbs').value);const p={eventType:'Carb Correction',carbs:n};const time=$('recordTime').value;if(time){const d=new Date(time);if(!Number.isNaN(d.getTime()))p.created_at=d.toISOString()}const raw=$('insulin').value.trim();if(raw!=='')p.insulin=Number(raw);const note=$('notes').value.trim();const mealNote=mealItems.map(x=>`${x.name}${rounded(x.weight)}g(${rounded(x.carbs)}C)`).join('、');const combined=[note,mealNote].filter(Boolean).join('｜');if(combined)p.notes=combined;return p}
 function preview(){const p=payload();$('preview').textContent=JSON.stringify(p,null,2)}
 
 const sheetUrlKey='ns-logger-sheet-csv-url-v1';
 const sheetCacheKey='ns-logger-sheet-food-cache-v1';
-let foods=[];
+let foods=[];let selectedFoodName="";let mealItems=[];
 function rounded(n){return String(Math.round((n+Number.EPSILON)*100)/100)}
 function parseCSV(raw){
  const rows=[];let row=[],field='',quoted=false;
@@ -46,30 +48,58 @@ function decodeFoods(csv){
  if(list.length>1000)throw Error('食物超過 1000 筆，請整理試算表');
  return {list,skipped};
 }
+function selectedFood(){return foods.find(x=>x.name===selectedFoodName)}
 function renderFoods(selected=''){
- $('foodSelect').replaceChildren(new Option('不使用食物換算（直接輸入碳水）',''));
- foods.slice().sort((a,b)=>a.name.localeCompare(b.name,'zh-Hant')).forEach(f=>$('foodSelect').add(new Option(f.name,f.name)));
- $('foodSelect').value=foods.some(f=>f.name===selected)?selected:'';
- syncFoodSelection();
+ selectedFoodName=foods.some(f=>f.name===selected)?selected:'';
+ syncFoodSelection();renderFoodResults();
+}
+function renderFoodResults(){
+ const query=$('foodSearch').value.trim().toLocaleLowerCase();const list=foods.filter(f=>f.name.toLocaleLowerCase().includes(query)).sort((a,b)=>a.name.localeCompare(b.name,'zh-Hant')).slice(0,35);
+ const target=$('foodResults');target.replaceChildren();
+ if(!foods.length){target.hidden=true;return}
+ if(!query){target.hidden=true;return}
+ target.hidden=false;
+ if(!list.length){const d=document.createElement('p');d.className='muted';d.style.padding='0 12px';d.textContent='找不到符合的食物';target.append(d);return}
+ list.forEach(f=>{const b=document.createElement('button');b.type='button';const strong=document.createElement('span');strong.textContent=f.name;const detail=document.createElement('small');detail.textContent=`係數 ${f.factor}｜每 100g 含 ${rounded(f.factor*100)}g 碳水`;b.append(strong,detail);b.addEventListener('click',()=>{selectedFoodName=f.name;$('foodSearch').value=f.name;target.hidden=true;syncFoodSelection();$('foodWeight').focus()});target.append(b)});
 }
 function syncFoodSelection(){
- const f=foods.find(x=>x.name===$('foodSelect').value);
- $('conversion').hidden=!f;
+ const f=selectedFood();$('conversion').hidden=!f;
+ $('selectedFood').textContent=f?`已選：${f.name}`:'尚未選擇食物';
  $('factorInfo').textContent=f?`${f.name}：係數 ${f.factor}（每 100g 含 ${rounded(f.factor*100)}g 碳水）`:'';
  $('foodWeight').value='';$('foodCarbs').value='';
 }
 function convertFood(source){
- const f=foods.find(x=>x.name===$('foodSelect').value);if(!f)return;
+ const f=selectedFood();if(!f)return;
  const from=$(source),other=$(source==='foodWeight'?'foodCarbs':'foodWeight');
- if(from.value.trim()===''){other.value='';$('carbs').value='';preview();return}
+ if(from.value.trim()===''){other.value='';return}
  const n=Number(from.value);
- if(!Number.isFinite(n)||n<0){other.value='';$('carbs').value='';preview();return}
- const result=source==='foodWeight'?n*f.factor:n/f.factor;
- other.value=rounded(result);
- const c=source==='foodWeight'?result:n;
- $('carbs').value=c>0&&c<=500?rounded(c):'';
+ if(!Number.isFinite(n)||n<0){other.value='';return}
+ other.value=rounded(source==='foodWeight'?n*f.factor:n/f.factor);
+}
+function totalCarbs(){return Math.round(mealItems.reduce((sum,x)=>sum+x.carbs,0)*100)/100}
+function renderMeal(){
+ const list=$('mealList');list.replaceChildren();
+ mealItems.forEach((item,index)=>{const li=document.createElement('li');const row=document.createElement('div');row.className='meal-item-row';const label=document.createElement('span');label.textContent=`${item.name}｜${rounded(item.weight)}g｜係數 ${item.factor}｜碳水 ${rounded(item.carbs)}g`;const btn=document.createElement('button');btn.type='button';btn.textContent='刪除';btn.setAttribute('aria-label',`刪除 ${item.name}`);btn.addEventListener('click',()=>{mealItems.splice(index,1);renderMeal()});row.append(label,btn);li.append(row);list.append(li)});
+ $('mealEmpty').hidden=mealItems.length>0;$('mealTotal').textContent=rounded(totalCarbs());
+ $('clearMeal').disabled=mealItems.length===0;
+ $('carbs').readOnly=mealItems.length>0;
+ if(mealItems.length){$('carbs').value=rounded(totalCarbs())}else if($('carbs').readOnly===false&&list.dataset.hadMeal==='yes'){$('carbs').value=''}
+ list.dataset.hadMeal=mealItems.length?'yes':'no';
  preview();
 }
+$('addFood').addEventListener('click',()=>{
+ const f=selectedFood();if(!f)return;
+ const w=$('foodWeight').value.trim(),c=$('foodCarbs').value.trim();
+ if(!w&&!c){alert('請輸入食物重量或碳水量');return}
+ const weight=Number(w),carbs=Number(c);
+ if(!Number.isFinite(weight)||weight<=0||weight>10000||!Number.isFinite(carbs)||carbs<=0||carbs>500){alert('請輸入有效的重量與碳水（每項碳水需在 0～500g）');return}
+ const next=totalCarbs()+weight*f.factor;
+ if(next>500){alert('本餐總碳水不可超過 500g');return}
+ mealItems.push({name:f.name,weight,factor:f.factor,carbs:weight*f.factor});
+ renderMeal();$('foodWeight').value='';$('foodCarbs').value='';$('foodSearch').value='';selectedFoodName='';syncFoodSelection();$('foodSearch').focus();
+});
+$('clearMeal').addEventListener('click',()=>{if(mealItems.length&&confirm('確定清空本餐所有食物？')){mealItems=[];renderMeal()}});
+$('foodSearch').addEventListener('input',()=>{selectedFoodName='';syncFoodSelection();renderFoodResults()});
 function validateCsvUrl(value){
  const u=new URL(value);
  if(u.protocol!=='https:'||u.hostname!=='docs.google.com'||!u.pathname.startsWith('/spreadsheets/d/'))throw Error('請貼上 Google Sheets「發布到網路」產生的 CSV 網址');
@@ -85,7 +115,7 @@ async function syncFoods(){
   if(!resp.ok)throw Error('HTTP '+resp.status);
   const body=await resp.text();if(body.length>2e6)throw Error('CSV 檔案過大');
   const {list,skipped}=decodeFoods(body);
-  const previous=$('foodSelect').value;
+  const previous=selectedFoodName;
   // 先存入快取，成功後才切換目前使用的資料
   localStorage.setItem(sheetCacheKey,JSON.stringify({url,foods:list,syncedAt:new Date().toISOString()}));
   localStorage.setItem(sheetUrlKey,url);
@@ -94,7 +124,7 @@ async function syncFoods(){
  }catch(e){$('syncStatus').textContent=`同步失敗（仍可使用上次快取）：${e.message}。請確認已「發布到網路」為 CSV，並檢查瀏覽器是否允許跨來源讀取。`}
  finally{button.disabled=false}
 }
-$('foodSelect').addEventListener('change',syncFoodSelection);
+
 $('foodWeight').addEventListener('input',()=>convertFood('foodWeight'));
 $('foodCarbs').addEventListener('input',()=>convertFood('foodCarbs'));
 $('saveSheetUrl').addEventListener('click',()=>{
@@ -109,10 +139,10 @@ try{
  }
  $('sheetUrl').value=localStorage.getItem(sheetUrlKey)||cached?.url||'';
 }catch(e){$('syncStatus').textContent='本機快取無法讀取，請重新同步'}
-renderFoods();
+renderFoods();renderMeal();
 if($('sheetUrl').value)syncFoods();
 $('syncFoods').addEventListener('click',syncFoods);
 
 restoreSettings();resetTime();$('nowTime').addEventListener('click',resetTime);$('recordTime').addEventListener('input',preview);['url','token'].forEach(id=>$(id).addEventListener('input',saveSettings));$('rememberToken').addEventListener('change',saveSettings);$('clearSaved').addEventListener('click',()=>{try{localStorage.removeItem(storageKey)}catch(e){}$('url').value='';$('token').value='';$('rememberToken').checked=false;$('saveStatus').textContent='設定已清除。';});['carbs','insulin','notes'].forEach(id=>$(id).addEventListener('input',preview));preview();
-$('form').addEventListener('submit',async e=>{e.preventDefault();if(busy)return;const p=payload();const enteredTime=$('recordTime').value;const parsedTime=new Date(enteredTime);if(!enteredTime||Number.isNaN(parsedTime.getTime())||parsedTime.getTime()>Date.now()+60000){$('status').textContent='請輸入有效且不晚於目前時間的紀錄日期與時間';return}if(!Number.isFinite(p.carbs)||p.carbs<=0||p.carbs>500){$('status').textContent='請輸入 0.1 至 500g 的碳水量';return}if(Object.hasOwn(p,'insulin')&&(!Number.isFinite(p.insulin)||p.insulin<0||p.insulin>100)){$('status').textContent='胰島素劑量請輸入 0 至 100U，或留空';return}let url;try{url=new URL($('url').value.trim());if(url.protocol!=='https:')throw Error('網址必須使用 HTTPS');url=url.origin}catch(err){$('status').textContent='Nightscout 網址格式不正確，請使用 HTTPS 網址';return}const token=$('token').value.trim();if(!token){$('status').textContent='請輸入認證資訊';return}if(!confirm(`確定要上傳至 ${url}？\n紀錄時間：${parsedTime.toLocaleString('zh-TW')}\n碳水：${p.carbs}g\n胰島素：${Object.hasOwn(p,'insulin')?p.insulin+'U（請確認已實際施打）':'不記錄'}`))return;busy=true;$('submit').disabled=true;$('status').textContent='上傳中…';try{const headers={'Content-Type':'application/json'};const u=new URL(`${url}/api/v1/treatments`);u.searchParams.set('token',token);const endpoint=u.toString();const response=await fetch(endpoint,{method:'POST',headers,body:JSON.stringify(p),cache:'no-store',referrerPolicy:'no-referrer'});if(!response.ok){const message=(await response.text()).slice(0,240);throw Error(`HTTP ${response.status}: ${message}`)}$('status').textContent=`已收到 Nightscout 成功回應：${p.carbs}g 碳水。請至 Nightscout 確認紀錄。`;$('carbs').value='';$('insulin').value='';$('notes').value='';$('foodWeight').value='';$('foodCarbs').value='';resetTime()}catch(err){$('status').textContent=`上傳未確認成功：${err.message}\n請先檢查 Nightscout 是否已有紀錄，再決定是否重試，以免重複上傳。`}finally{busy=false;$('submit').disabled=false}});
+$('form').addEventListener('submit',async e=>{e.preventDefault();if(busy)return;const p=payload();const enteredTime=$('recordTime').value;const parsedTime=new Date(enteredTime);if(!enteredTime||Number.isNaN(parsedTime.getTime())||parsedTime.getTime()>Date.now()+60000){$('status').textContent='請輸入有效且不晚於目前時間的紀錄日期與時間';return}if(!Number.isFinite(p.carbs)||p.carbs<=0||p.carbs>500){$('status').textContent='請輸入 0.1 至 500g 的碳水量';return}if(Object.hasOwn(p,'insulin')&&(!Number.isFinite(p.insulin)||p.insulin<0||p.insulin>100)){$('status').textContent='胰島素劑量請輸入 0 至 100U，或留空';return}let url;try{url=new URL($('url').value.trim());if(url.protocol!=='https:')throw Error('網址必須使用 HTTPS');url=url.origin}catch(err){$('status').textContent='Nightscout 網址格式不正確，請使用 HTTPS 網址';return}const token=$('token').value.trim();if(!token){$('status').textContent='請輸入認證資訊';return}if(!confirm(`確定要上傳至 ${url}？\n紀錄時間：${parsedTime.toLocaleString('zh-TW')}\n碳水：${p.carbs}g\n胰島素：${Object.hasOwn(p,'insulin')?p.insulin+'U（請確認已實際施打）':'不記錄'}`))return;busy=true;$('submit').disabled=true;$('status').textContent='上傳中…';try{const headers={'Content-Type':'application/json'};const u=new URL(`${url}/api/v1/treatments`);u.searchParams.set('token',token);const endpoint=u.toString();const response=await fetch(endpoint,{method:'POST',headers,body:JSON.stringify(p),cache:'no-store',referrerPolicy:'no-referrer'});if(!response.ok){const message=(await response.text()).slice(0,240);throw Error(`HTTP ${response.status}: ${message}`)}$('status').textContent=`已收到 Nightscout 成功回應：${p.carbs}g 碳水。請至 Nightscout 確認紀錄。`;$('carbs').value='';$('insulin').value='';$('notes').value='';mealItems=[];renderMeal();$('foodWeight').value='';$('foodCarbs').value='';resetTime()}catch(err){$('status').textContent=`上傳未確認成功：${err.message}\n請先檢查 Nightscout 是否已有紀錄，再決定是否重試，以免重複上傳。`}finally{busy=false;$('submit').disabled=false}});
 </script></body></html>
