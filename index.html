@@ -179,13 +179,15 @@ function renderHistory(){const root=$('historyResults');root.replaceChildren();i
  const btn=addHistoryText(card,'button','編輯此筆','subbutton');btn.type='button';btn.addEventListener('click',()=>{
  const old=card.querySelector('.history-editor');if(old){old.remove();return}document.querySelectorAll('.history-editor').forEach(x=>x.remove());
  const ed=document.createElement('div');ed.className='history-editor';card.appendChild(ed);
- addHistoryText(ed,'p','留空的欄位表示不修改；要新增原本沒有的碳水或胰島素，請輸入數值。','muted');
+ addHistoryText(ed,'p','原本有數值的欄位不能清空；若不想修改，請保留原數值。原本沒有的欄位可以留空。','muted');
  const c=historyInput(ed,`hc${i}`,'碳水（g）',rec.carbs,'number'),ins=historyInput(ed,`hi${i}`,'實際已施打胰島素（U）',rec.insulin,'number'),note=historyInput(ed,`hn${i}`,'備註',rec.notes||'');
  const dt=historyInput(ed,`hd${i}`,'紀錄時間（本地時間）',Number.isNaN(date.getTime())?'':new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16),'datetime-local');
+ const feedback=addHistoryText(ed,'p','修改狀態：尚未送出','muted');feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');feedback.style.cssText='white-space:pre-wrap;font-weight:600;padding:10px;background:#f1f5f9;border-radius:8px';
  const actions=document.createElement('div');actions.className='history-actions';ed.appendChild(actions);
  const cancel=addHistoryText(actions,'button','取消','subbutton');cancel.type='button';cancel.addEventListener('click',()=>ed.remove());
  const save=addHistoryText(actions,'button','確認修改','subbutton');save.type='button';save.addEventListener('click',async()=>{
   try{
+   feedback.textContent='正在檢查修改內容…';
    const patch={};for(const [key,input,max] of [['carbs',c,500],['insulin',ins,100]]){
     if(input.value.trim()===''){if(rec[key]!==undefined)throw Error(`原有${key}欄位不能清空；本版僅支援修改數值`);continue}
     const n=Number(input.value);if(!Number.isFinite(n)||n<0||n>max)throw Error(`${key}必須介於 0 至 ${max}`);
@@ -194,11 +196,11 @@ function renderHistory(){const root=$('historyResults');root.replaceChildren();i
    if(note.value!==String(rec.notes||''))patch.notes=note.value;
    if(!dt.value||Number.isNaN(new Date(dt.value).getTime())||new Date(dt.value).getTime()>Date.now()+60000)throw Error('紀錄時間無效或晚於現在');
    const iso=new Date(dt.value).toISOString();if(iso!==new Date(rec.created_at||rec.timestamp||rec.date).toISOString())patch.created_at=iso;
-   if(!Object.keys(patch).length){historyMessage('沒有欄位變更。');return}
+   if(!Object.keys(patch).length){feedback.textContent='沒有欄位變更，請調整數值後再試。';return}
    if(!confirm(`確認修改此筆 Nightscout 紀錄？\n原始：${rec.carbs??'—'}g / ${rec.insulin??'—'}U\n變更：${JSON.stringify(patch)}\n這會直接更改伺服器資料。`))return;
-   save.disabled=true;cancel.disabled=true;historyMessage('正在交換 JWT 並更新紀錄…');
+   save.disabled=true;cancel.disabled=true;feedback.textContent='正在交換 JWT 並更新紀錄…';historyMessage('正在交換 JWT 並更新紀錄…');
    await historyPatch(rec._id,patch);historyMessage('更新已送出，重新讀取確認中…');await historyFetch();historyMessage('已重新讀取 Nightscout 紀錄，請核對更新後數值。');
-  }catch(e){historyMessage(`修改未確認成功：${e.message}。請先重新查詢，避免重複操作。`)}finally{save.disabled=false;cancel.disabled=false}
+  }catch(e){feedback.textContent=`修改未確認成功：${e.message}。請先重新查詢，避免重複操作。`;historyMessage(feedback.textContent)}finally{save.disabled=false;cancel.disabled=false}
  });
  });
  });
@@ -207,7 +209,7 @@ async function historyPatch(id,patch){
  const base=historyBase(),token=historyToken();const authUrl=base+'/api/v2/authorization/request/'+encodeURIComponent(token);
  const auth=await fetch(authUrl,{cache:'no-store',referrerPolicy:'no-referrer'});
  if(!auth.ok)throw Error(`JWT 交換失敗 HTTP ${auth.status}（請確認使用 Subject Access Token 與權限）`);
- const json=await auth.json(),jwt=json.token;if(!jwt)throw Error('驗證端點沒有回傳 token');
+ const json=await auth.json(),jwt=json.token||json.result?.token;if(!jwt)throw Error('驗證端點沒有回傳 JWT token（請確認驗證回應格式）');
  const r=await fetch(base+'/api/v3/treatments/'+encodeURIComponent(id),{method:'PATCH',headers:{'Authorization':'Bearer '+jwt,'Content-Type':'application/json'},body:JSON.stringify(patch),cache:'no-store',referrerPolicy:'no-referrer'});
  if(!r.ok)throw Error(`API v3 更新失敗 HTTP ${r.status}：${(await r.text()).slice(0,180)}`);
 }
